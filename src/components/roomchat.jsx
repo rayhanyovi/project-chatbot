@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image'
-import { XMarkIcon, MinusIcon  } from '@heroicons/react/24/solid'
+import Image from 'next/image';
+import { XMarkIcon, MinusIcon } from '@heroicons/react/24/solid';
 import { v4 as uuidv4 } from 'uuid';
 
 const RoomChat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [botResponse, setBotResponse] = useState(''); 
+  const [botResponse, setBotResponse] = useState('');
   const [user_id, setUserId] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const getUniqueUserId = () => {
@@ -22,15 +23,17 @@ const RoomChat = () => {
     };
 
     setUserId(getUniqueUserId());
-  }, []); 
-  
+  }, []);
 
   const handleSendMessage = async () => {
     if (newMessage.trim() !== '') {
-
-      console.log('Sending payload:', { query: newMessage, user_id });
+      const userMessage = { text: newMessage, sender: 'user' };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
+      setNewMessage('');
 
       try {
+        setLoading(true);
+
         const response = await fetch('https://mrneuralnet-chain-link-ai.hf.space/bot_interaction', {
           method: 'POST',
           headers: {
@@ -41,69 +44,73 @@ const RoomChat = () => {
             user_id: user_id,
           }),
         });
-  
+
         if (response.ok) {
           const result = await response.json();
           const botResponseText = result[0].text;
-  
-          setMessages([...messages, { text: newMessage, sender: 'user' }, { text: botResponseText, sender: 'bot' }]);
+          const botResponseMessage = { text: botResponseText, sender: 'bot' };
+
+          setMessages((prevMessages) => [...prevMessages, botResponseMessage]);
           setBotResponse(botResponseText);
-          setNewMessage('');
         } else {
           console.error('Error:', response.statusText);
         }
       } catch (error) {
         console.error('Error:', error);
+      } finally {
+        setLoading(false);
       }
     }
   };
-  
 
-
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
 
   return (
-    <div className='rounded-lg border-solid border-2  md:w-[30vw] md:h-[60vh] m-0 p-0  h-[100%] w-[100vw]' >
-        <div className='flex flex-row text-white px-7 py-6 bg-cyan-400 justify-between'>
-            <div className='flex flex-row items-center gap-4'>
-            <Image
-              src="/FloatingRobot.jpg"
-              alt="Chatbot Logo"
-              className="rounded-full"
-              width={45}
-              height={45}
-            />
-            <h1 className='text-2xl font-bold'>Chatbot</h1>
-            </div>
-            
-            <div className='flex flex-row gap-2'>
-           <MinusIcon className="text-white h-8 w-8 font-bold" />
-           <XMarkIcon className="text-white h-8 w-8 font-bold" />
-            
-         
-            </div>
+    <div className='flex flex-col h-screen'>
+      <div className='flex flex-row text-white px-7 py-6 bg-cyan-400 justify-between'>
+        <div className='flex flex-row items-center gap-4'>
+          <Image
+            src="/FloatingRobot.jpg"
+            alt="Chatbot Logo"
+            className="rounded-full"
+            width={45}
+            height={45}
+          />
+          <div>
+          <h1 className='text-2xl font-bold'>Chatbot</h1> 
+          
+          <p className={`${loading ? 'opacity-1' : 'opacity-0' }`}>Chatbot is typing...</p>
+
+          </div>
         </div>
-      <div className='bg-sky-100 h-full overflow-y-auto p-5 h-[80vh]  shadow-inner' >
+
+       
+      </div>
+
+      <div className='flex-grow overflow-y-auto p-5 bg-sky-100 shadow-inner'>
         {messages.map((message, index) => (
           <div
-          className={`px-5 py-5 flex mb-1 flex-col ${message.sender === 'user' ? 'items-end' : 'items-start'}`}
+            className={`px-5 py-5 flex mb-1 flex-col ${message.sender === 'user' ? 'items-end' : 'items-start'}`}
             key={index}
-           
           >
             <span
-            className=' py-2 '
+              className='py-2'
               style={{
                 color: 'Black',
               }}
             >
-               {message.sender === 'user' ? 'You' : 'Bot'}
+              {message.sender === 'user' ? 'You' : 'Bot'}
             </span>
 
             <span
-            className='px-4 py-2 w-fit'
+              className='px-4 py-2 w-fit max-w-4xl'
               style={{
                 background: message.sender === 'user' ? '#4CAF50' : '#008CBA',
                 color: 'white',
-               
                 borderRadius: '5px',
               }}
             >
@@ -111,18 +118,23 @@ const RoomChat = () => {
             </span>
           </div>
         ))}
-
       </div>
-      <div className='bg-gray-100 p-4 flex flex-row gap-4 focus-visible:border-cyan-400' >
+
+      <div className='bg-gray-100 p-4 flex flex-row gap-4 focus-visible:border-cyan-400'>
         <input
+          onKeyDown={handleKeyPress}
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type your message..."
           className='w-full min-h-[5vh] px-4 text-black focus:outline-cyan-400'
         />
-        <button onClick={handleSendMessage} className='text-white bg-cyan-400 px-6 py-2 rounded-xl' >
-          Send
+        <button
+          onClick={handleSendMessage}
+          className={`text-white px-6 py-2 rounded-xl ${loading ? 'bg-gray-500' : 'bg-cyan-400'}`}
+          disabled={loading}
+        >
+          {loading ? '...' : 'Send'}
         </button>
       </div>
     </div>
