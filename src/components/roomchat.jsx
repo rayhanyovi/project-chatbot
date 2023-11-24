@@ -1,19 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image'
 import { XMarkIcon, MinusIcon  } from '@heroicons/react/24/solid'
+import { v4 as uuidv4 } from 'uuid';
 
 const RoomChat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [currentSender, setCurrentSender] = useState('user'); // Menentukan pengirim pesan (user atau lawan bicara)
+  const [botResponse, setBotResponse] = useState(''); 
+  const [user_id, setUserId] = useState('');
 
-  const handleSendMessage = () => {
+  useEffect(() => {
+    const getUniqueUserId = () => {
+      let storedUserId = sessionStorage.getItem('user_id');
+
+      if (!storedUserId) {
+        storedUserId = uuidv4();
+        sessionStorage.setItem('user_id', storedUserId);
+      }
+
+      return storedUserId;
+    };
+
+    setUserId(getUniqueUserId());
+  }, []); 
+  
+
+  const handleSendMessage = async () => {
     if (newMessage.trim() !== '') {
-      setMessages([...messages, { text: newMessage, sender: currentSender }]);
-      setNewMessage('');
-      setCurrentSender(currentSender === 'user' ? 'bot' : 'user'); // Bergantian antara user dan opponent
+
+      console.log('Sending payload:', { query: newMessage, user_id });
+
+      try {
+        const response = await fetch('https://mrneuralnet-chain-link-ai.hf.space/bot_interaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: newMessage,
+            user_id: user_id,
+          }),
+        });
+  
+        if (response.ok) {
+          const result = await response.json();
+          const botResponseText = result[0].text;
+  
+          setMessages([...messages, { text: newMessage, sender: 'user' }, { text: botResponseText, sender: 'bot' }]);
+          setBotResponse(botResponseText);
+          setNewMessage('');
+        } else {
+          console.error('Error:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
     }
   };
+  
+
+
 
   return (
     <div className='rounded-lg border-solid border-2  md:w-[30vw] md:h-[60vh] m-0 p-0  h-[100%] w-[100vw]' >
@@ -65,6 +111,7 @@ const RoomChat = () => {
             </span>
           </div>
         ))}
+
       </div>
       <div className='bg-gray-100 p-4 flex flex-row gap-4 focus-visible:border-cyan-400' >
         <input
