@@ -26,6 +26,11 @@ const RoomChat = () => {
   }, []);
 
   const handleSendMessage = async () => {
+    console.log('Sending payload:', {
+      query: newMessage,
+      user_id: user_id,
+    });
+
     if (newMessage.trim() !== '') {
       const userMessage = { text: newMessage, sender: 'user' };
       setMessages((prevMessages) => [...prevMessages, userMessage]);
@@ -64,9 +69,20 @@ const RoomChat = () => {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent the default behavior (line break)
       handleSendMessage();
     }
+  };
+
+  // Menangani representasi teks dengan line break dalam JSX
+  const renderMessageText = (text) => {
+    return text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
   };
 
   return (
@@ -81,14 +97,10 @@ const RoomChat = () => {
             height={45}
           />
           <div>
-          <h1 className='text-2xl font-bold'>Chatbot</h1> 
-          
-          <p className={`${loading ? 'opacity-1' : 'opacity-0' }`}>Chatbot is typing...</p>
-
+            <h1 className='text-2xl font-bold'>Chatbot</h1>
+            <p className={`${loading ? 'opacity-1' : 'opacity-0'}`}>Chatbot is typing...</p>
           </div>
         </div>
-
-       
       </div>
 
       <div className='flex-grow overflow-y-auto p-5 bg-sky-100 shadow-inner'>
@@ -107,27 +119,26 @@ const RoomChat = () => {
             </span>
 
             <span
-              className='px-4 py-2 w-fit max-w-4xl'
+              className='px-4 py-2 w-fit max-w-4xl break-all'
               style={{
                 background: message.sender === 'user' ? '#4CAF50' : '#008CBA',
                 color: 'white',
                 borderRadius: '5px',
               }}
             >
-              {message.text}
+              {renderMessageText(message.text)}
             </span>
           </div>
         ))}
       </div>
 
       <div className='bg-gray-100 p-4 flex flex-row gap-4 focus-visible:border-cyan-400'>
-        <input
+        <textarea
           onKeyDown={handleKeyPress}
-          type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type your message..."
-          className='w-full min-h-[5vh] px-4 text-black focus:outline-cyan-400'
+          placeholder='Type your message...'
+          className='w-full min-h-[5vh] max-h-[20vh] px-4 text-black focus:outline-cyan-400 resize-none'
         />
         <button
           onClick={handleSendMessage}
